@@ -12,7 +12,7 @@
 4. [Feature Requirements (MVP → V2 → V3)](#4-feature-requirements)
 5. [Design System — Cyber-Vitality](#5-design-system--cyber-vitality)
 6. [Screen-by-Screen Specification](#6-screen-by-screen-specification)
-7. [Animation & Motion Spec](#7-animation--motion-spec)
+7. [Animation & Motion Spec](#7-aniamation--motion-spec)
 8. [Architecture & Tech Stack](#8-architecture--tech-stack)
 9. [Project File Structure](#9-project-file-structure)
 10. [AI Pipeline Workflow](#10-ai-pipeline-workflow)
