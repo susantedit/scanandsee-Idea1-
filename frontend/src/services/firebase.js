@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { getAnalytics, logEvent } from 'firebase/analytics';
 import {
   getAuth,
   GoogleAuthProvider,
@@ -18,12 +19,22 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase (only if config is present)
-let app, auth;
+let app, auth, analytics = null;
 
 try {
   if (firebaseConfig.apiKey) {
     app  = initializeApp(firebaseConfig);
     auth = getAuth(app);
+    // Initialize Analytics only when measurement id is provided
+    if (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) {
+      try {
+        analytics = getAnalytics(app);
+      } catch (e) {
+        // Analytics may fail in non-browser or restricted contexts
+        console.warn('Firebase analytics init failed', e.message);
+        analytics = null;
+      }
+    }
   }
 } catch (err) {
   console.warn('Firebase init failed — running in demo mode', err.message);
@@ -72,3 +83,12 @@ export function onAuthChange(callback) {
 }
 
 export { auth };
+
+/**
+ * Track a lightweight analytics event if analytics is available.
+ * Safe to call from UI code without throwing.
+ */
+export function trackEvent(name, params = {}) {
+  if (!analytics) return;
+  try { logEvent(analytics, name, params); } catch (e) { /* ignore */ }
+}

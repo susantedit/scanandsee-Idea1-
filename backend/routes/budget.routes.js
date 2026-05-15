@@ -3,11 +3,8 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { chatLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
-import { getGeminiModel } from '../config/gemini.js';
+import { groqJson } from '../services/groq.service.js';
 import { buildBudgetPrompt } from '../prompts/budget.prompt.js';
-import { getProfile } from '../services/firebase.service.js';
-import { extractJson } from '../utils/helpers.js';
-import { badGateway } from '../utils/apiError.js';
 import { sanitizeAiOutput } from '../utils/sanitizeOutput.js';
 import { USER_GOALS } from '../config/constants.js';
 
@@ -24,20 +21,10 @@ const BudgetRequestSchema = z.object({
 // ── POST /api/budget/optimize ─────────────────────────────────────────────────
 router.post('/optimize', chatLimiter, validate(BudgetRequestSchema), async (req, res, next) => {
   try {
-    const model  = getGeminiModel();
     const prompt = buildBudgetPrompt(req.body);
-
-    const result = await model.generateContent({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json' },
-    });
-
-    const parsed = extractJson(result.response.text());
-    if (!parsed) throw badGateway('Budget optimization failed. Please try again.');
+    const parsed = await groqJson(prompt, { maxTokens: 1200, temperature: 0.3 });
     res.json(sanitizeAiOutput(parsed));
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 export default router;

@@ -1,4 +1,4 @@
-11111111111111111111import React from 'react';
+import React from 'react';
 
 const DEFAULT_QUESTIONS = [
   'Can diabetics eat this?',

@@ -2,7 +2,9 @@ import { getAuthToken } from './firebase.js';
 
 const BASE = import.meta.env.VITE_API_URL || '';
 
-if (import.meta.env.PROD && BASE && !BASE.startsWith('https://')) {
+// Only warn about HTTPS if deployed to a real domain (not localhost/preview)
+const isRealProduction = import.meta.env.PROD && BASE && !BASE.includes('localhost') && !BASE.includes('127.0.0.1');
+if (isRealProduction && !BASE.startsWith('https://')) {
   console.error('[Security] VITE_API_URL must use HTTPS in production');
 }
 
@@ -39,6 +41,15 @@ async function request(method, path, body = null, isFormData = false) {
 
   let data;
   try { data = await res.json(); } catch { data = { error: `Server error (${res.status})` }; }
+
+  // Read Retry-After from headers (if present) and attach to details
+  const retryAfter = res.headers?.get?.('Retry-After');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (!Number.isNaN(seconds)) {
+      data.details = { ...(data.details || {}), retryInSeconds: seconds };
+    }
+  }
 
   if (!res.ok) {
     throw new ApiRequestError(data.error || `Request failed (${res.status})`, res.status, data.details);
@@ -147,4 +158,12 @@ export async function analyzeGroceryCart(imageFiles) {
   const form = new FormData();
   imageFiles.forEach(f => form.append('images', f));
   return request('POST', '/api/grocery/analyze', form, true);
+}
+
+// ── Classify (lightweight live-frame preview) ─────────────────────────────────
+export async function classifyQuick(imageFile) {
+  if (!(imageFile instanceof File)) throw new ApiRequestError('Invalid image file', 400);
+  const form = new FormData();
+  form.append('image', imageFile);
+  return request('POST', '/api/classify/quick', form, true);
 }

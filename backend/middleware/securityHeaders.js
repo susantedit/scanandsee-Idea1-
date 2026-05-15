@@ -21,6 +21,11 @@ export function securityHeaders(req, res, next) {
   // Referrer policy — don't leak API URL in referrer headers
   res.setHeader('Referrer-Policy', 'no-referrer');
 
+  // Allow popups to be used by auth flows while keeping most COOP protections.
+  // This prevents popup window checks (window.closed / window.close) from
+  // being blocked when the app needs to open auth provider popups.
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+
   // Permissions policy — restrict browser features
   res.setHeader(
     'Permissions-Policy',

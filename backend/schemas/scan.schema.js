@@ -9,7 +9,10 @@ export const IngredientSchema = z.object({
 
 export const WarningSchema = z.object({
   text:      z.string().min(1).max(500).trim(),
-  risk_type: z.enum(['diabetes', 'heart', 'obesity', 'cancer', 'allergy']),
+  risk_type: z.enum([
+    'diabetes', 'heart', 'obesity', 'cancer', 'allergy',
+    'toxicity', 'drug_interaction', 'fake_product', 'expiry', 'general',
+  ]),
 });
 
 export const GymAssessmentSchema = z.object({
@@ -23,17 +26,34 @@ export const GymAssessmentSchema = z.object({
 });
 
 export const AnalysisSchema = z.object({
+  // Universal detection fields
+  object_type: z.enum([
+    'food', 'packaged_food', 'supplement', 'medicine',
+    'plant', 'animal', 'document', 'product', 'scene', 'person', 'other',
+  ]).default('food'),
+  confidence:  z.number().min(0).max(100).default(80),
+  description: z.string().max(1000).trim().default(''),
+  fun_facts:   z.array(z.string().max(300).trim()).max(5).default([]),
+
+  // Core fields
   food_name:         z.string().min(1).max(200).trim(),
   health_score:      z.number().min(0).max(10),
-  verdict:           z.enum(['HEALTHY', 'MODERATE', 'UNHEALTHY']),
-  calories:          z.number().nonnegative().max(10000),
-  protein_g:         z.number().nonnegative().max(1000),
-  carbs_g:           z.number().nonnegative().max(1000),
-  fats_g:            z.number().nonnegative().max(1000),
-  sugar_g:           z.number().nonnegative().max(1000),
-  sodium_mg:         z.number().nonnegative().max(100000),
-  fiber_g:           z.number().nonnegative().max(1000),
+  verdict:           z.enum([
+    'HEALTHY', 'MODERATE', 'UNHEALTHY',
+    'SAFE', 'CAUTION', 'DANGEROUS', 'IDENTIFIED', 'UNKNOWN',
+  ]),
+
+  // Nutrition (0 for non-food)
+  calories:          z.number().nonnegative().max(10000).default(0),
+  protein_g:         z.number().nonnegative().max(1000).default(0),
+  carbs_g:           z.number().nonnegative().max(1000).default(0),
+  fats_g:            z.number().nonnegative().max(1000).default(0),
+  sugar_g:           z.number().nonnegative().max(1000).default(0),
+  sodium_mg:         z.number().nonnegative().max(100000).default(0),
+  fiber_g:           z.number().nonnegative().max(1000).default(0),
   serving_size:      z.string().max(100).trim().optional().default('1 serving'),
+
+  // Analysis
   ingredients:       z.array(IngredientSchema).max(100).default([]),
   warnings:          z.array(WarningSchema).max(20).default([]),
   improvements:      z.array(z.string().max(300).trim()).max(10).default([]),

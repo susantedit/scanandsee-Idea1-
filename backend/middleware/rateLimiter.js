@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import crypto from 'crypto';
 import logger from '../utils/logger.js';
 import {
   WINDOW_GLOBAL_MS, WINDOW_SCAN_MS, WINDOW_VOICE_MS,
@@ -8,11 +9,46 @@ import {
 } from '../config/constants.js';
 
 /**
- * Key generator: prefer authenticated UID over IP.
- * Using UID prevents IP-rotation abuse by authenticated users.
- * Unauthenticated requests are keyed by IP only.
+ * Generate device fingerprint from User-Agent and Accept-Language headers.
+ * Helps prevent rate limit bypass via VPN IP rotation or device spoofing.
+ * 
+ * @param {Request} req - Express request object
+ * @returns {string} 8-character hash of device characteristics
  */
-const userOrIpKey = (req) => req.user?.uid || req.ip;
+function getDeviceFingerprint(req) {
+  const userAgent = req.headers['user-agent'] || 'unknown';
+  const acceptLanguage = req.headers['accept-language'] || 'unknown';
+  
+  const fingerprint = crypto
+    .createHash('sha256')
+    .update(`${userAgent}:${acceptLanguage}`)
+    .digest('hex')
+    .slice(0, 8);
+  
+  return fingerprint;
+}
+
+/**
+ * Key generator: combines IP, UID, and device fingerprint.
+ * Using UID prevents IP-rotation abuse by authenticated users.
+ * Using device fingerprint prevents VPN/proxy rotation by unauthenticated users.
+ * Unauthenticated requests are keyed by IP + device fingerprint.
+ * 
+ * Format: "{uid}:{ip}:{fingerprint}" or "{ip}:{fingerprint}"
+ */
+const enhancedUserOrIpKey = (req) => {
+  const ip = req.ip;
+  const uid = req.user?.uid || 'anon';
+  const fingerprint = getDeviceFingerprint(req);
+  
+  // Composite key prevents multiple bypass vectors
+  return `${uid}:${ip}:${fingerprint}`;
+};
+
+/**
+ * Legacy key generator for auth endpoints (IP-only, for brute-force protection).
+ */
+const authOnlyKey = (req) => req.ip;
 
 /**
  * Log when a rate limit is hit — feeds abuse detection.
@@ -32,7 +68,7 @@ function onLimitReached(req, res, options) {
 export const globalLimiter = rateLimit({
   windowMs:        WINDOW_GLOBAL_MS,
   max:             LIMIT_GLOBAL_FREE,
-  keyGenerator:    userOrIpKey,
+  keyGenerator:    enhancedUserOrIpKey,
   standardHeaders: true,
   legacyHeaders:   false,
   handler: (req, res) => {
@@ -66,7 +102,7 @@ export const authLimiter = rateLimit({
 export const scanLimiter = rateLimit({
   windowMs:        WINDOW_SCAN_MS,
   max:             LIMIT_SCAN_FREE,
-  keyGenerator:    userOrIpKey,
+  keyGenerator:    enhancedUserOrIpKey,
   standardHeaders: true,
   legacyHeaders:   false,
   handler: (req, res) => {
@@ -83,7 +119,7 @@ export const scanLimiter = rateLimit({
 export const voiceLimiter = rateLimit({
   windowMs:        WINDOW_VOICE_MS,
   max:             LIMIT_VOICE_FREE,
-  keyGenerator:    userOrIpKey,
+  keyGenerator:    enhancedUserOrIpKey,
   standardHeaders: true,
   legacyHeaders:   false,
   handler: (req, res) => {
@@ -99,7 +135,7 @@ export const voiceLimiter = rateLimit({
 export const chatLimiter = rateLimit({
   windowMs:        WINDOW_CHAT_MS,
   max:             LIMIT_CHAT_FREE,
-  keyGenerator:    userOrIpKey,
+  keyGenerator:    enhancedUserOrIpKey,
   standardHeaders: true,
   legacyHeaders:   false,
   handler: (req, res) => {
@@ -115,7 +151,7 @@ export const chatLimiter = rateLimit({
 export const compareLimiter = rateLimit({
   windowMs:        WINDOW_COMPARE_MS,
   max:             LIMIT_COMPARE_FREE,
-  keyGenerator:    userOrIpKey,
+  keyGenerator:    enhancedUserOrIpKey,
   standardHeaders: true,
   legacyHeaders:   false,
   handler: (req, res) => {

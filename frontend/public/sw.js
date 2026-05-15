@@ -38,14 +38,18 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Never cache API calls or Firebase
+  // Never cache: non-GET, API calls, Firebase, chrome extensions, browser internals
   if (
+    event.request.method !== 'GET' ||
+    url.protocol === 'chrome-extension:' ||
+    url.protocol === 'moz-extension:' ||
+    url.protocol === 'safari-extension:' ||
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('firebase') ||
     url.hostname.includes('googleapis') ||
-    event.request.method !== 'GET'
+    url.hostname.includes('gstatic')
   ) {
-    return; // let browser handle normally
+    return; // let browser handle normally, no caching
   }
 
   // Google Fonts — cache first

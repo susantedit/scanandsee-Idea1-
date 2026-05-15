@@ -43,6 +43,15 @@ export function errorHandler(err, req, res, next) {
       ...logPayload,
       stack: err.stack,
     });
+  }
+  
+  // If upstream provided retry info (e.g. AI quota), include `Retry-After` header
+  if (statusCode === 429 && err.details?.retryInSeconds) {
+    try {
+      res.setHeader('Retry-After', String(err.details.retryInSeconds));
+    } catch (e) {
+      // non-fatal — continue to send JSON body
+    }
   } else if (statusCode === 429) {
     // Rate limit hits get their own log level for abuse monitoring
     logger.warn(`RATE_LIMIT ${req.method} ${req.path}`, logPayload);

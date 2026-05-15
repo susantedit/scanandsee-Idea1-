@@ -5,19 +5,69 @@ import CameraView from '../components/scan/CameraView.jsx';
 import UploadZone from '../components/scan/UploadZone.jsx';
 import Button from '../components/ui/Button.jsx';
 import { analyzeScan } from '../services/api.js';
+import { trackEvent } from '../services/firebase.js';
+import { useToast } from '../components/ui/Toast.jsx';
+import { generateBadges } from '../utils/badgeGenerator.js';
+import useGamificationStore from '../store/useGamificationStore.js';
 import useAppStore from '../store/useAppStore.js';
 
 export default function ScanPage() {
   const navigate = useNavigate();
   const { gymMode, setCurrentScan, setIsAnalyzing, isAnalyzing, getPersona, getGoal } = useAppStore();
+  const { recordScan } = useGamificationStore();
 
   const [mode,    setMode]    = useState('camera'); // 'camera' | 'upload'
   const [file,    setFile]    = useState(null);
   const [preview, setPreview] = useState(null);
   const [error,   setError]   = useState('');
+  const [live, setLive] = useState(false);
+  const liveTimerRef = React.useRef(null);
+  const [liveOverlay, setLiveOverlay] = useState(null);
+  React.useEffect(() => {
+    if (!liveOverlay) return;
+    const iv = setTimeout(() => setLiveOverlay(null), 2500);
+    return () => clearTimeout(iv);
+  }, [liveOverlay]);
+  // Clear timer on unmount
+  React.useEffect(() => {
+    return () => { if (liveTimerRef.current) clearTimeout(liveTimerRef.current); };
+  }, []);
+  const toast = useToast();
 
-  const handleCapture = async (capturedFile) => {
-    await runAnalysis(capturedFile);
+  const BACKOFF_KEY = 'scan429Backoff';
+  const MAX_BACKOFF = 300; // seconds
+
+  function getBackoff() {
+    try {
+      const raw = sessionStorage.getItem(BACKOFF_KEY);
+      if (!raw) return { count: 0 };
+      return JSON.parse(raw);
+    } catch {
+      return { count: 0 };
+    }
+  }
+
+  function setBackoff(state) {
+    try { sessionStorage.setItem(BACKOFF_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  function resetBackoff() {
+    try { sessionStorage.removeItem(BACKOFF_KEY); } catch {}
+  }
+
+  function incrementBackoff(baseSeconds) {
+    const s = getBackoff();
+    const nextCount = (s.count || 0) + 1;
+    const pause = Math.min(baseSeconds * Math.pow(2, nextCount - 1), MAX_BACKOFF);
+    const until = Date.now() + pause * 1000;
+    const next = { count: nextCount, pause, until };
+    setBackoff(next);
+    return next;
+  }
+
+  const handleCapture = async (capturedFile, opts = { live: false }) => {
+    try { trackEvent('scan_start'); } catch {}
+    await runAnalysis(capturedFile, { navigateOnSuccess: !opts.live, liveFrame: opts.live });
   };
 
   const handleFileSelected = (selectedFile) => {
@@ -25,15 +75,54 @@ export default function ScanPage() {
     setPreview(URL.createObjectURL(selectedFile));
   };
 
-  const runAnalysis = async (imageFile) => {
+  const runAnalysis = async (imageFile, opts = { navigateOnSuccess: true, liveFrame: false }) => {
     setError('');
     setIsAnalyzing(true);
     try {
       const result = await analyzeScan(imageFile, gymMode, getGoal(), getPersona());
-      setCurrentScan(result);
-      navigate('/results');
+      try { trackEvent('scan_complete', { health_score: result.health_score }); } catch {}
+      // Successful scan — reset any backoff state
+      try { resetBackoff(); } catch {}
+      // Record scan in gamification store
+      try { recordScan(); } catch {}
+      
+      if (opts.liveFrame) {
+        // update overlay with lightweight info + badges
+        const badges = generateBadges(result, gymMode);
+        setLiveOverlay({
+          food: result.food_name,
+          score: result.health_score,
+          verdict: result.verdict,
+          badges,
+          timestamp: Date.now(),
+        });
+        try { trackEvent('scan_live_result', { health_score: result.health_score }); } catch {}
+      } else {
+        setCurrentScan(result);
+        navigate('/results');
+      }
     } catch (err) {
-      setError(err.message || 'Analysis failed. Please try again.');
+      try { trackEvent('scan_error', { message: err.message?.slice(0,200) }); } catch {}
+
+      // If server returned retry info (rate limit), pause live scanning and show message
+      const retrySec = err?.details?.retryInSeconds || 30;
+      if (err.status === 429) {
+        // Adaptive backoff: increase pause each consecutive 429 within session
+        const { pause, count } = incrementBackoff(retrySec);
+        const msg = `Rate limit reached. Pausing live for ${pause}s (attempt ${count}).`;
+        setError(msg);
+        try { toast.show(msg, { duration: pause * 1000 }); } catch {}
+
+        // disable live and schedule re-enable
+        setLive(false);
+        if (liveTimerRef.current) clearTimeout(liveTimerRef.current);
+        liveTimerRef.current = setTimeout(() => {
+          setLive(true);
+          // keep backoff count (will reset on success)
+        }, pause * 1000);
+      } else {
+        setError(err.message || 'Analysis failed. Please try again.');
+      }
     } finally {
       setIsAnalyzing(false);
     }
@@ -112,7 +201,14 @@ export default function ScanPage() {
       <div style={{ flex: 1, position: 'relative' }}>
         {mode === 'camera' ? (
           <div style={{ height: '100dvh' }}>
-            <CameraView onCapture={handleCapture} isAnalyzing={isAnalyzing} />
+            <CameraView
+              live={live}
+              onLiveChange={setLive}
+              onCapture={handleCapture}
+              isAnalyzing={isAnalyzing}
+              liveResult={liveOverlay}
+              gymMode={gymMode}
+            />
           </div>
         ) : (
           <div style={{

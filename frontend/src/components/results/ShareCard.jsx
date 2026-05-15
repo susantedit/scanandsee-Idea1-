@@ -48,7 +48,6 @@ export default function ShareCard({ scan }) {
     ctx.fillText(foodName, W/2, 180);
 
     // Score
-    const score = scan.health_score ?? scan.healthScore ?? 0;
     ctx.fillStyle = color;
     ctx.font = 'bold 120px sans-serif';
     ctx.fillText(score.toFixed(1), W/2, 340);
