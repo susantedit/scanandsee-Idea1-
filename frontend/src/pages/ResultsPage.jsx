@@ -11,22 +11,29 @@ import MealImprovement from '../components/results/MealImprovement.jsx';
 import FitnessAssessment from '../components/results/FitnessAssessment.jsx';
 import ShareCard from '../components/results/ShareCard.jsx';
 import MoodAnalysis from '../components/results/MoodAnalysis.jsx';
+import FunFacts from '../components/results/FunFacts.jsx';
 import DangerAlert from '../components/ui/DangerAlert.jsx';
 import VoiceWaveform from '../components/ui/VoiceWaveform.jsx';
 import Chip from '../components/ui/Chip.jsx';
 import Button from '../components/ui/Button.jsx';
 import { useVoice } from '../hooks/useVoice.js';
-import { getScan, deleteScan } from '../services/api.js';
+import { getScan } from '../services/api.js';
 import { shareScan } from '../services/community.js';
 import useAppStore from '../store/useAppStore.js';
 import { PERSONA_LABELS } from '../utils/formatNutrition.js';
+
+function isFoodType(scan) {
+  const t = scan?.object_type;
+  if (!t) return true;
+  return ['food', 'packaged_food', 'supplement'].includes(t);
+}
 
 export default function ResultsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const scanId = searchParams.get('scanId');
 
-  const { currentScan, setCurrentScan, addToHistory, gymMode, getPersona } = useAppStore();
+  const { currentScan, addToHistory, gymMode, getPersona } = useAppStore();
   const { speak, stop, toggle, isPlaying, isSupported } = useVoice();
 
   const [scan,    setScan]    = useState(currentScan);
@@ -35,73 +42,62 @@ export default function ResultsPage() {
   const [shared,  setShared]  = useState(false);
   const [error,   setError]   = useState('');
 
-  // Load scan from API if opened via scanId (from history)
   useEffect(() => {
     if (scanId && !currentScan) {
       getScan(scanId)
-        .then(data => {
-          // Normalize field names from Firestore (camelCase) to analysis format
-          setScan({
-            ...data,
-            food_name:         data.foodName,
-            health_score:      data.healthScore,
-            protein_g:         data.protein,
-            carbs_g:           data.carbs,
-            fats_g:            data.fats,
-            sugar_g:           data.sugar,
-            sodium_mg:         data.sodium,
-            fiber_g:           data.fiber,
-            voice_explanation: data.voiceExplanation,
-            gym_assessment:    data.gymAssessment,
-          });
-        })
+        .then(data => setScan({
+          ...data,
+          food_name:         data.foodName,
+          health_score:      data.healthScore,
+          protein_g:         data.protein,
+          carbs_g:           data.carbs,
+          fats_g:            data.fats,
+          sugar_g:           data.sugar,
+          sodium_mg:         data.sodium,
+          fiber_g:           data.fiber,
+          voice_explanation: data.voiceExplanation,
+          gym_assessment:    data.gymAssessment,
+          object_type:       data.objectType || 'food',
+          confidence:        data.confidence ?? 80,
+          description:       data.description || '',
+          fun_facts:         data.funFacts || [],
+        }))
         .catch(() => setError('Could not load scan.'))
         .finally(() => setLoading(false));
     }
   }, [scanId, currentScan]);
 
-  // Auto-play voice on mount
   useEffect(() => {
     if (!scan?.voice_explanation || !isSupported) return;
-    const timer = setTimeout(() => {
-      speak(scan.voice_explanation, { rate: 1.0, pitch: 1.0 });
-    }, 800);
-    return () => { clearTimeout(timer); stop(); };
+    const t = setTimeout(() => speak(scan.voice_explanation, { rate: 1.0, pitch: 1.0 }), 800);
+    return () => { clearTimeout(t); stop(); };
   }, [scan?.voice_explanation]);
 
   const handleSave = () => {
-    if (scan) {
-      addToHistory({
-        id:          scan.scanId || scanId,
-        foodName:    scan.food_name,
-        healthScore: scan.health_score,
-        verdict:     scan.verdict,
-        calories:    scan.calories,
-        imageUrl:    scan.imageUrl,
-        createdAt:   new Date(),
-      });
-      setSaved(true);
-    }
+    if (!scan) return;
+    addToHistory({
+      id: scan.scanId || scanId, foodName: scan.food_name,
+      healthScore: scan.health_score, verdict: scan.verdict,
+      calories: scan.calories, imageUrl: scan.imageUrl, createdAt: new Date(),
+    });
+    setSaved(true);
   };
 
-  if (loading) {
-    return (
-      <div className="page flex-center">
-        <Loader2 size={32} color="var(--primary)" className="anim-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="page flex-center">
+      <Loader2 size={32} color="var(--primary)" className="anim-spin" />
+    </div>
+  );
 
-  if (error || !scan) {
-    return (
-      <div className="page flex-center flex-col gap-4" style={{ padding: 'var(--sp-8)' }}>
-        <p className="text-body" style={{ color: 'var(--error)' }}>{error || 'No scan data found.'}</p>
-        <Button variant="outline" onClick={() => navigate('/scan')}>Scan Again</Button>
-      </div>
-    );
-  }
+  if (error || !scan) return (
+    <div className="page flex-center flex-col gap-4" style={{ padding: 'var(--sp-8)' }}>
+      <p className="text-body" style={{ color: 'var(--error)' }}>{error || 'No scan data found.'}</p>
+      <Button variant="outline" onClick={() => navigate('/scan')}>Scan Again</Button>
+    </div>
+  );
 
   const persona = getPersona();
+  const isFood  = isFoodType(scan);
 
   return (
     <div className="page">
@@ -109,19 +105,17 @@ export default function ResultsPage() {
 
       <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-8)', paddingTop: 'var(--sp-4)', paddingBottom: 'var(--sp-12)' }}>
 
-        {/* Health Score Hero */}
+        {/* Hero — works for any object type */}
         <HealthScoreHero scan={scan} />
 
-        {/* Voice Section */}
+        {/* Voice */}
         {scan.voice_explanation && (
           <GlassCard className="anim-fade-up stagger-2" padding="p-4">
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', marginBottom: 'var(--sp-3)' }}>
-              <button
-                onClick={() => toggle(scan.voice_explanation)}
+              <button onClick={() => toggle(scan.voice_explanation)}
                 className="btn btn-primary btn-sm btn-icon"
                 style={{ padding: '8px', borderRadius: '50%', clipPath: 'none' }}
-                aria-label={isPlaying ? 'Pause voice' : 'Play voice'}
-              >
+                aria-label={isPlaying ? 'Pause' : 'Play'}>
                 {isPlaying ? <Pause size={14} /> : <Play size={14} />}
               </button>
               <VoiceWaveform isPlaying={isPlaying} color="var(--secondary)" height={28} />
@@ -133,100 +127,84 @@ export default function ResultsPage() {
           </GlassCard>
         )}
 
-        {/* Macros */}
-        <div className="anim-fade-up stagger-3">
-          <MacroBreakdown scan={scan} />
-        </div>
+        {/* Macros — food only */}
+        {isFood && (
+          <div className="anim-fade-up stagger-3">
+            <MacroBreakdown scan={scan} />
+          </div>
+        )}
 
-        {/* Danger Alerts */}
+        {/* Warnings — all types (medicine interactions, plant toxicity, etc.) */}
         {scan.warnings?.length > 0 && (
           <div className="anim-fade-up stagger-4">
             <p className="text-label-md" style={{ color: 'var(--error)', marginBottom: 'var(--sp-3)' }}>
-              Health Warnings ({scan.warnings.length})
+              Warnings ({scan.warnings.length})
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
-              {scan.warnings.map((w, i) => (
-                <DangerAlert key={i} warning={w} index={i} />
-              ))}
+              {scan.warnings.map((w, i) => <DangerAlert key={i} warning={w} index={i} />)}
             </div>
           </div>
         )}
 
-        {/* Ingredients */}
+        {/* Ingredients / Components — all types */}
         <div className="anim-fade-up stagger-4">
           <IngredientList ingredients={scan.ingredients} />
         </div>
 
-        {/* Meal Improvement */}
+        {/* Improvements / Suggestions — all types */}
         <div className="anim-fade-up stagger-5">
           <MealImprovement improvements={scan.improvements} />
         </div>
 
-        {/* Fitness Assessment */}
-        {gymMode && scan.gym_assessment && (
+        {/* Fun Facts — universal */}
+        <div className="anim-fade-up stagger-5">
+          <FunFacts facts={scan.fun_facts} />
+        </div>
+
+        {/* Gym assessment — food only */}
+        {isFood && gymMode && scan.gym_assessment && (
           <div className="anim-fade-up stagger-5">
             <FitnessAssessment gymAssessment={scan.gym_assessment} />
           </div>
         )}
 
-        {/* Mood & Brain Analysis — F17 */}
-        <div className="anim-fade-up stagger-5">
-          <MoodAnalysis scan={scan} />
-        </div>
+        {/* Mood analysis — food only */}
+        {isFood && (
+          <div className="anim-fade-up stagger-5">
+            <MoodAnalysis scan={scan} />
+          </div>
+        )}
 
-        {/* Action buttons */}
+        {/* Actions */}
         <div className="anim-fade-up stagger-6" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
           <div style={{ display: 'flex', gap: 'var(--sp-3)' }}>
-            <Button
-              variant={saved ? 'ghost' : 'primary'}
-              icon={<Bookmark size={14} />}
-              onClick={handleSave}
-              style={{ flex: 1 }}
-              disabled={saved}
-            >
-              {saved ? 'SAVED' : 'SAVE SCAN'}
+            <Button variant={saved ? 'ghost' : 'primary'} icon={<Bookmark size={14} />}
+              onClick={handleSave} style={{ flex: 1 }} disabled={saved}>
+              {saved ? 'SAVED' : 'SAVE'}
             </Button>
-            <Button
-              variant="outline"
-              icon={<GitCompare size={14} />}
-              onClick={() => navigate('/compare')}
-              style={{ flex: 1 }}
-            >
+            <Button variant="outline" icon={<GitCompare size={14} />}
+              onClick={() => navigate('/compare')} style={{ flex: 1 }}>
               COMPARE
             </Button>
           </div>
-
           <div style={{ display: 'flex', gap: 'var(--sp-3)' }}>
-            <Button
-              variant="outline"
-              icon={<MessageCircle size={14} />}
-              style={{ flex: 1 }}
-              onClick={() => navigate(`/chat?scanId=${scan.scanId || scanId || ''}`)}
-            >
+            <Button variant="outline" icon={<MessageCircle size={14} />} style={{ flex: 1 }}
+              onClick={() => navigate(`/chat?scanId=${scan.scanId || scanId || ''}`)}>
               ASK AI
             </Button>
-            <Button
-              variant={shared ? 'ghost' : 'outline'}
-              icon={<Users size={14} />}
-              style={{ flex: 1 }}
-              disabled={shared || !(scan.scanId || scanId)}
+            <Button variant={shared ? 'ghost' : 'outline'} icon={<Users size={14} />}
+              style={{ flex: 1 }} disabled={shared || !(scan.scanId || scanId)}
               onClick={async () => {
-                try {
-                  await shareScan(scan.scanId || scanId, '');
-                  setShared(true);
-                } catch { /* silent */ }
-              }}
-            >
+                try { await shareScan(scan.scanId || scanId, ''); setShared(true); } catch {}
+              }}>
               {shared ? 'SHARED' : 'COMMUNITY'}
             </Button>
           </div>
-
           <ShareCard scan={scan} />
         </div>
 
-        {/* Scan again */}
         <Button variant="ghost" fullWidth onClick={() => { stop(); navigate('/scan'); }}>
-          SCAN ANOTHER FOOD
+          SCAN ANOTHER OBJECT
         </Button>
       </div>
 

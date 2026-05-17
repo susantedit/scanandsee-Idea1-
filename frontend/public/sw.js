@@ -1,90 +1,38 @@
-// ScanAndSee Service Worker
-// Caches app shell for offline use and fast loads
+// ScanAndSee Service Worker v2
+// Handles: offline caching + push notifications
 
-const CACHE_NAME = 'scanandsee-v1';
+const CACHE_NAME = 'scanandsee-v2';
+const PRECACHE   = ['/', '/index.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
-// Files to cache on install (app shell)
-const PRECACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-];
+self.addEventListener('install',  (e) => { e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(PRECACHE))); self.skipWaiting(); });
+self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))); self.clients.claim(); });
 
-// Install — cache app shell
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE))
-  );
-  self.skipWaiting();
-});
-
-// Activate — clean up old caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
-  );
-  self.clients.claim();
-});
-
-// Fetch — network first for API, cache first for assets
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-
-  // Never cache: non-GET, API calls, Firebase, chrome extensions, browser internals
-  if (
-    event.request.method !== 'GET' ||
-    url.protocol === 'chrome-extension:' ||
-    url.protocol === 'moz-extension:' ||
-    url.protocol === 'safari-extension:' ||
-    url.pathname.startsWith('/api/') ||
-    url.hostname.includes('firebase') ||
-    url.hostname.includes('googleapis') ||
-    url.hostname.includes('gstatic')
-  ) {
-    return; // let browser handle normally, no caching
-  }
-
-  // Google Fonts — cache first
+  if (event.request.method !== 'GET' || url.protocol === 'chrome-extension:' || url.protocol === 'moz-extension:' || url.pathname.startsWith('/api/') || url.hostname.includes('firebase') || url.hostname.includes('googleapis') || url.hostname.includes('gstatic')) return;
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(
-      caches.open('fonts-v1').then((cache) =>
-        cache.match(event.request).then(
-          (cached) =>
-            cached ||
-            fetch(event.request).then((res) => {
-              cache.put(event.request, res.clone());
-              return res;
-            })
-        )
-      )
-    );
+    event.respondWith(caches.open('fonts-v1').then(cache => cache.match(event.request).then(cached => cached || fetch(event.request).then(res => { cache.put(event.request, res.clone()); return res; }))));
     return;
   }
+  event.respondWith(fetch(event.request).then(res => { if (res.ok) caches.open(CACHE_NAME).then(c => c.put(event.request, res.clone())); return res; }).catch(() => caches.match(event.request).then(cached => cached || caches.match('/index.html'))));
+});
 
-  // App shell — network first, fall back to cache
-  event.respondWith(
-    fetch(event.request)
-      .then((res) => {
-        // Cache successful responses
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return res;
-      })
-      .catch(() =>
-        // Offline fallback — serve from cache
-        caches.match(event.request).then(
-          (cached) => cached || caches.match('/index.html')
-        )
-      )
-  );
+// ── Push Notifications ────────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = { title: 'ScanAndSee', body: "Time to scan your food!", icon: '/icons/icon-192.png' };
+  try { if (event.data) data = { ...data, ...event.data.json() }; } catch {}
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body, icon: data.icon || '/icons/icon-192.png',
+    badge: '/icons/icon-96.png', tag: data.tag || 'scanandsee',
+    data: data.url ? { url: data.url } : {}, vibrate: [100, 50, 100],
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    for (const c of list) { if (c.url.includes(self.location.origin) && 'focus' in c) { c.navigate(url); return c.focus(); } }
+    return clients.openWindow(url);
+  }));
 });
