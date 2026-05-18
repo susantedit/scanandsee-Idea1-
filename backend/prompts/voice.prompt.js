@@ -18,6 +18,8 @@ export function buildVoicePrompt(analysis, persona = 'coach') {
 
 Generate a natural, spoken voice explanation for this food analysis. 
 Write it as if you are SPEAKING to the user, not writing a report.
+CRITICAL: Frame this predictively, assuming the user is ABOUT to eat this (Before-Eating framing).
+Instead of saying "this has 14g of sugar", say "eating this will spike your blood sugar...".
 Keep it to 2-3 sentences maximum. Be specific to the actual numbers.
 
 Food: ${analysis.food_name}

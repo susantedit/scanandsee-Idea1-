@@ -58,12 +58,13 @@ async function request(method, path, body = null, isFormData = false) {
 }
 
 // ── Scan ──────────────────────────────────────────────────────────────────────
-export async function analyzeScan(imageFile, gymMode = false, userGoal = '', personality = 'coach') {
+export async function analyzeScan(imageFile, gymMode = false, userGoal = '', personality = 'coach', context = 'eating') {
   if (!(imageFile instanceof File)) throw new ApiRequestError('Invalid image file', 400);
   if (imageFile.size > 10 * 1024 * 1024) throw new ApiRequestError('Image too large (max 10MB)', 400);
   const form = new FormData();
   form.append('image', imageFile);
   form.append('gymMode', String(gymMode));
+  form.append('context', context);
   if (userGoal)    form.append('userGoal',    userGoal.slice(0, 50));
   if (personality) form.append('personality', personality.slice(0, 20));
   return request('POST', '/api/scan/analyze', form, true);
@@ -84,6 +85,9 @@ export async function deleteScan(scanId) {
 export async function getProfile()              { return request('GET', '/api/user/profile'); }
 export async function saveProfile(data)         { return request('POST', '/api/user/profile', data); }
 export async function getUserStats()            { return request('GET', '/api/user/stats'); }
+export async function getUserInsights()         { return request('GET', '/api/user/insights'); }
+export async function getUserWarnings()         { return request('GET', '/api/user/warnings'); }
+export async function savePushToken(token)      { return request('POST', '/api/user/push-token', { token }); }
 
 // ── Nutrition ─────────────────────────────────────────────────────────────────
 export async function getDailyNutrition()       { return request('GET', '/api/nutrition/daily'); }
@@ -167,3 +171,10 @@ export async function classifyQuick(imageFile) {
   form.append('image', imageFile);
   return request('POST', '/api/classify/quick', form, true);
 }
+
+// ── Tier 3 ────────────────────────────────────────────────────────────────────
+export async function getWearableData() { return request('GET', '/api/wearables'); }
+export async function saveWearableData(data) { return request('POST', '/api/wearables', data); }
+export async function submitEnterpriseInquiry(data) { return request('POST', '/api/enterprise/inquiry', data); }
+export async function getMarketplaceProducts() { return request('GET', '/api/marketplace/products'); }
+

@@ -3,7 +3,7 @@ import { ArrowLeft, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore.js';
 import useGamificationStore from '../store/useGamificationStore.js';
-import { getScanHistory } from '../services/api.js';
+import { getScanHistory, getUserInsights } from '../services/api.js';
 
 export default function AnalyticsPage() {
   const navigate = useNavigate();
@@ -16,13 +16,19 @@ export default function AnalyticsPage() {
     verdicts: {},
     topFood: null,
     recentScans: [],
+    insights: [],
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const { scans } = await getScanHistory(100, 0);
+        const [historyRes, insightsRes] = await Promise.all([
+          getScanHistory(100, 0),
+          getUserInsights().catch(() => ({ insights: [] })) // don't fail page if insights fail
+        ]);
+        
+        const scans = historyRes.scans;
         if (!scans?.length) {
           setLoading(false);
           return;
@@ -47,6 +53,7 @@ export default function AnalyticsPage() {
           verdicts,
           topFood: topFood ? { name: topFood[0], count: topFood[1] } : null,
           recentScans: scans.slice(0, 5),
+          insights: insightsRes.insights || [],
         });
       } catch (err) {
         console.error('Failed to load analytics', err);
@@ -169,6 +176,33 @@ export default function AnalyticsPage() {
               }}>
                 <div style={{ fontSize: 11, color: 'var(--on-surface-muted)', marginBottom: 'var(--sp-2)' }}>{verdict}</div>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{count}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Behavioral Insights */}
+      {stats.insights && stats.insights.length > 0 && (
+        <div style={{
+          background: 'var(--surface-low)',
+          border: '1px solid var(--primary-muted)',
+          borderRadius: 'var(--r-lg)',
+          padding: 'var(--sp-5)',
+          marginBottom: 'var(--sp-6)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: 'var(--primary)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-4)' }}>
+            <TrendingUp size={18} color="var(--primary)" />
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Behavioral Patterns</h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+            {stats.insights.map((insight, idx) => (
+              <div key={idx} style={{ paddingBottom: idx !== stats.insights.length - 1 ? 'var(--sp-4)' : 0, borderBottom: idx !== stats.insights.length - 1 ? '1px solid var(--glass-border)' : 'none' }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 'var(--sp-1)', color: 'var(--on-surface)' }}>{insight.title}</h3>
+                <p style={{ fontSize: 13, color: 'var(--on-surface-muted)', margin: 0, lineHeight: 1.5 }}>{insight.description}</p>
               </div>
             ))}
           </div>

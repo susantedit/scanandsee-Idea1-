@@ -12,6 +12,7 @@ import FitnessAssessment from '../components/results/FitnessAssessment.jsx';
 import ShareCard from '../components/results/ShareCard.jsx';
 import MoodAnalysis from '../components/results/MoodAnalysis.jsx';
 import FunFacts from '../components/results/FunFacts.jsx';
+import BodyConsequences from '../components/results/BodyConsequences.jsx';
 import DangerAlert from '../components/ui/DangerAlert.jsx';
 import VoiceWaveform from '../components/ui/VoiceWaveform.jsx';
 import Chip from '../components/ui/Chip.jsx';
@@ -47,20 +48,22 @@ export default function ResultsPage() {
       getScan(scanId)
         .then(data => setScan({
           ...data,
-          food_name:         data.foodName,
-          health_score:      data.healthScore,
-          protein_g:         data.protein,
-          carbs_g:           data.carbs,
-          fats_g:            data.fats,
-          sugar_g:           data.sugar,
-          sodium_mg:         data.sodium,
-          fiber_g:           data.fiber,
-          voice_explanation: data.voiceExplanation,
-          gym_assessment:    data.gymAssessment,
-          object_type:       data.objectType || 'food',
-          confidence:        data.confidence ?? 80,
-          description:       data.description || '',
-          fun_facts:         data.funFacts || [],
+          food_name:          data.foodName,
+          health_score:       data.healthScore,
+          protein_g:          data.protein,
+          carbs_g:            data.carbs,
+          fats_g:             data.fats,
+          sugar_g:            data.sugar,
+          sodium_mg:          data.sodium,
+          fiber_g:            data.fiber,
+          voice_explanation:  data.voiceExplanation,
+          gym_assessment:     data.gymAssessment,
+          object_type:        data.objectType || 'food',
+          confidence:         data.confidence ?? 80,
+          description:        data.description || '',
+          fun_facts:          data.funFacts || [],
+          body_consequences:  data.bodyConsequences || [],
+          score_reason:       data.scoreReason || '',
         }))
         .catch(() => setError('Could not load scan.'))
         .finally(() => setLoading(false));
@@ -105,7 +108,15 @@ export default function ResultsPage() {
 
       <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-8)', paddingTop: 'var(--sp-4)', paddingBottom: 'var(--sp-12)' }}>
 
-        {/* Hero — works for any object type */}
+        {scan.confidence < 60 && (
+          <div className="anim-fade-up" style={{ padding: 'var(--sp-3)', background: 'rgba(255,107,107,0.1)', border: '1px solid var(--error)', borderRadius: 'var(--r-md)', display: 'flex', gap: 'var(--sp-2)', alignItems: 'center' }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <p className="text-body-sm" style={{ color: 'var(--error)' }}>
+              <strong>Not confident in scan.</strong> Try taking a clearer photo for accurate analysis.
+            </p>
+          </div>
+        )}
+
         <HealthScoreHero scan={scan} />
 
         {/* Voice */}
@@ -127,6 +138,14 @@ export default function ResultsPage() {
           </GlassCard>
         )}
 
+        {/* BODY CONSEQUENCES — shown first, most impactful */}
+        <div className="anim-fade-up stagger-2">
+          <BodyConsequences
+            consequences={scan.body_consequences}
+            scoreReason={scan.score_reason}
+          />
+        </div>
+
         {/* Macros — food only */}
         {isFood && (
           <div className="anim-fade-up stagger-3">
@@ -134,7 +153,7 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {/* Warnings — all types (medicine interactions, plant toxicity, etc.) */}
+        {/* Warnings */}
         {scan.warnings?.length > 0 && (
           <div className="anim-fade-up stagger-4">
             <p className="text-label-md" style={{ color: 'var(--error)', marginBottom: 'var(--sp-3)' }}>
@@ -146,29 +165,24 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {/* Ingredients / Components — all types */}
         <div className="anim-fade-up stagger-4">
           <IngredientList ingredients={scan.ingredients} />
         </div>
 
-        {/* Improvements / Suggestions — all types */}
         <div className="anim-fade-up stagger-5">
           <MealImprovement improvements={scan.improvements} />
         </div>
 
-        {/* Fun Facts — universal */}
         <div className="anim-fade-up stagger-5">
           <FunFacts facts={scan.fun_facts} />
         </div>
 
-        {/* Gym assessment — food only */}
         {isFood && gymMode && scan.gym_assessment && (
           <div className="anim-fade-up stagger-5">
             <FitnessAssessment gymAssessment={scan.gym_assessment} />
           </div>
         )}
 
-        {/* Mood analysis — food only */}
         {isFood && (
           <div className="anim-fade-up stagger-5">
             <MoodAnalysis scan={scan} />

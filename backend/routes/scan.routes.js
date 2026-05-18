@@ -52,13 +52,17 @@ router.post(
       const rawGoal = req.body.userGoal || '';
       const userGoal = ALLOWED_GOALS.has(rawGoal) ? rawGoal : '';
 
-      logger.info('Scan started', { uid: req.user.uid, gymMode, personality });
+      // Validate context (eating vs buying)
+      const rawContext = req.body.context || 'eating';
+      const context = (rawContext === 'buying') ? 'buying' : 'eating';
+
+      logger.info('Scan started', { uid: req.user.uid, gymMode, personality, context });
 
       // 1. Process image — resize, compress, strip EXIF, verify magic bytes
       const processedBuffer = await processImage(req.file.buffer);
 
       // 2. Analyze with Gemini Vision
-      const analysis = await analyzeFood(processedBuffer, { gymMode, userGoal, personality });
+      const analysis = await analyzeFood(processedBuffer, { gymMode, userGoal, personality, context });
 
       // 3. Recalculate health score server-side — never trust AI's self-scoring
       analysis.health_score = calculateHealthScore(analysis);

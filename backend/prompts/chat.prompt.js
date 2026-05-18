@@ -26,8 +26,16 @@ FOOD CONTEXT (the user just scanned this food):
 Answer the question specifically about this food when relevant.`
     : '';
 
+  const historySection = (scanHistory && scanHistory.length > 0)
+    ? `
+USER'S RECENT SCAN HISTORY (AI MEMORY):
+The user recently scanned these items: ${scanHistory.join(', ')}.
+Use this history to personalize your response (e.g., 'I noticed you've been scanning a lot of high-protein foods lately...').`
+    : '';
+
   return `You are an AI nutrition assistant. ${personaInstructions}
 ${contextSection}
+${historySection}
 
 USER QUESTION: "${question}"
 

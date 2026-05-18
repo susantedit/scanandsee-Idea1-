@@ -40,26 +40,24 @@ export default function ShareCard({ scan }) {
     ctx.textAlign = 'center';
     ctx.fillText('ScanAndSee', W/2, 80);
 
-    // Food name
-    ctx.fillStyle = '#e5e1e4';
-    ctx.font = 'bold 42px sans-serif';
-    // Truncate long food names
-    const foodName = (scan.food_name || scan.foodName || 'Unknown Food').slice(0, 30);
-    ctx.fillText(foodName, W/2, 180);
+    // Viral Hook Text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 54px sans-serif';
+    ctx.textAlign = 'center';
+    const foodName = (scan.food_name || scan.foodName || 'Unknown Food').slice(0, 25);
+    ctx.fillText(`This ${foodName} scored`, W/2, 200);
 
     // Score
     ctx.fillStyle = color;
-    ctx.font = 'bold 120px sans-serif';
-    ctx.fillText(score.toFixed(1), W/2, 340);
+    ctx.font = 'bold 180px sans-serif';
+    ctx.fillText(`${score.toFixed(1)}/10`, W/2, 400);
 
-    ctx.fillStyle = '#b9ccb2';
-    ctx.font = '24px monospace';
-    ctx.fillText('HEALTH SCORE / 10', W/2, 390);
-
-    // Verdict
+    // Verdict box
+    ctx.fillStyle = `${color}20`;
+    ctx.fillRect(W/2 - 150, 440, 300, 60);
     ctx.fillStyle = color;
     ctx.font = 'bold 32px monospace';
-    ctx.fillText(scan.verdict || '', W/2, 460);
+    ctx.fillText((scan.verdict || '').toUpperCase(), W/2, 480);
 
     // Macros
     const cal  = scan.calories  || 0;

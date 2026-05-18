@@ -737,10 +737,3 @@ The competitive advantage you actually have — that no well-funded competitor c
 
 Three decisions you need to make this week, in order:
 
-**One** — pick gym users  gym users.  Your messaging, your scans, your voice assistant tone, everything gets built for a 22-year-old who cares about protein.
-
-**Two** — test distribution before product. Post three "exposing fake healthy foods" videos using just your phone and ChatGPT for analysis. If they don't get engagement, you have a positioning problem. Fix that before building anything.
-
-**Three** — define what "coming back" means for your app. What will make someone scan food again tomorrow? Answer that question specifically, then build exactly that and nothing more.
-
-The analysis you already have is excellent. The gap between where you are and dominating this market is not ideas — it's relentless execution on the smallest possible thing that proves retention.

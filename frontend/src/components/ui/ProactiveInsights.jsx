@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Brain, TrendingDown, AlertTriangle, Flame, Trophy } from 'lucide-react';
 import { getInsights, getMemorySummary } from '../../services/aiMemory.js';
+import { getUserWarnings } from '../../services/api.js';
 
 function getIcon(insight) {
   const lower = insight.toLowerCase();
@@ -35,10 +36,23 @@ export default function ProactiveInsights() {
   const [streak,     setStreak]     = useState(0);
 
   useEffect(() => {
-    const all = getInsights();
-    setInsights(all);
-    const mem = getMemorySummary();
-    setStreak(mem.streakData?.current || 0);
+    const fetchAllInsights = async () => {
+      // Get local memory insights
+      const localInsights = getInsights();
+      const mem = getMemorySummary();
+      setStreak(mem.streakData?.current || 0);
+
+      // Get server warnings
+      try {
+        const { warnings } = await getUserWarnings();
+        // Merge without duplicates
+        const combined = [...new Set([...localInsights, ...(warnings || [])])];
+        setInsights(combined);
+      } catch (err) {
+        setInsights(localInsights);
+      }
+    };
+    fetchAllInsights();
   }, []);
 
   const visible = insights.filter((_, i) => !dismissed.includes(i));

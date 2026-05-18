@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+﻿import React, { useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { onAuthChange } from './services/firebase.js';
@@ -29,6 +29,9 @@ const GroceryPage     = lazy(() => import('./pages/GroceryPage.jsx'));
 const RestaurantPage  = lazy(() => import('./pages/RestaurantPage.jsx'));
 const FakeDetectPage  = lazy(() => import('./pages/FakeDetectPage.jsx'));
 const CommunityPage   = lazy(() => import('./pages/CommunityPage.jsx'));
+const WearablesPage   = lazy(() => import('./pages/WearablesPage.jsx'));
+const EnterprisePage  = lazy(() => import('./pages/EnterprisePage.jsx'));
+const MarketplacePage = lazy(() => import('./pages/MarketplacePage.jsx'));
 
 // Admin pages
 const AdminLayout     = lazy(() => import('./pages/admin/AdminLayout.jsx'));
@@ -36,7 +39,7 @@ const AdminDashboard  = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const AdminUsers      = lazy(() => import('./pages/admin/AdminUsers.jsx'));
 const AdminModeration = lazy(() => import('./pages/admin/AdminModeration.jsx'));
 
-// ── Loading fallback ──────────────────────────────────────────────────────────
+// â”€â”€ Loading fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PageLoader() {
   return (
     <div style={{
@@ -51,7 +54,7 @@ function PageLoader() {
   );
 }
 
-// ── Protected route — redirects to /onboarding if not authenticated ───────────
+// â”€â”€ Protected route â€” redirects to /onboarding if not authenticated â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ProtectedRoute({ children }) {
   const { isAuthenticated, authLoading } = useAppStore();
 
@@ -60,7 +63,7 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
+// â”€â”€ App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function App() {
   const { setUser, setProfile, setAuthLoading } = useAppStore();
 
@@ -85,7 +88,7 @@ export default function App() {
           const data = await getProfile();
           if (data.profile) setProfile(data.profile);
         } catch {
-          // Profile not found yet — user will set it up
+          // Profile not found yet â€” user will set it up
         }
       } else {
         setUser(null);
@@ -123,6 +126,9 @@ export default function App() {
           <Route path="/fake"       element={<ProtectedRoute><FakeDetectPage /></ProtectedRoute>} />
           <Route path="/community"  element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
           <Route path="/analytics"  element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/wearables"  element={<ProtectedRoute><WearablesPage /></ProtectedRoute>} />
+          <Route path="/enterprise" element={<ProtectedRoute><EnterprisePage /></ProtectedRoute>} />
+          <Route path="/marketplace" element={<ProtectedRoute><MarketplacePage /></ProtectedRoute>} />
 
           {/* Admin routes */}
           <Route path="/admin" element={<ProtectedRoute><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
@@ -134,3 +140,5 @@ export default function App() {
     </TokenProvider>
   );
 }
+
+

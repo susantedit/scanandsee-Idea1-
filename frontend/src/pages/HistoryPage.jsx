@@ -12,6 +12,18 @@ import useAppStore from '../store/useAppStore.js';
 import { scoreToColor } from '../utils/scoreColor.js';
 import { timeAgo } from '../utils/formatNutrition.js';
 
+// ── Behavioral Insights Logic ────────────────────────────────────────────────
+function generateInsight(scans) {
+  if (!scans || scans.length < 3) return "Scan more items to unlock personalized behavioral insights.";
+  
+  const lowScores = scans.filter(s => s.healthScore < 5).length;
+  const highScores = scans.filter(s => s.healthScore >= 8).length;
+  
+  if (lowScores >= 3) return "Insight: You've been scanning a lot of low-scoring items recently. Try swapping to whole foods for better energy.";
+  if (highScores >= 3) return "Insight: Great job! You're consistently choosing high-performance foods.";
+  return "Insight: Your eating patterns are balanced. Focus on protein intake to optimize recovery.";
+}
+
 // ── Weekly bar chart (custom SVG) ─────────────────────────────────────────────
 function WeeklyChart({ days }) {
   if (!days?.length) return null;
@@ -329,6 +341,19 @@ export default function HistoryPage() {
         >
           VIEW WEEKLY HEALTH REPORT
         </Button>
+
+        {/* Behavioral Pattern Insights */}
+        {scans.length > 0 && (
+          <GlassCard className="anim-fade-up stagger-2" padding="p-4" style={{ borderColor: 'rgba(0, 219, 233, 0.3)', background: 'var(--surface-highest)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-2)' }}>
+              <span className="chip" style={{ background: 'var(--secondary)', color: '#000', fontSize: 9, fontWeight: 800, padding: '2px 6px' }}>AI MEMORY</span>
+              <p className="text-label" style={{ color: 'var(--secondary)', fontSize: 10, letterSpacing: '0.05em' }}>BEHAVIORAL INSIGHT</p>
+            </div>
+            <p className="text-body-sm" style={{ color: 'var(--on-surface)' }}>
+              {generateInsight(scans)}
+            </p>
+          </GlassCard>
+        )}
 
         {/* Scan feed */}
         <div className="anim-fade-up stagger-3">

@@ -3,6 +3,8 @@
  * Handles permission, local notifications, daily reminders, achievement alerts.
  */
 
+import { savePushToken } from './api.js';
+
 const NOTIF_KEY = 'scanandsee_notif_prefs';
 const loadPrefs = () => { try { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '{}'); } catch { return {}; } };
 const savePrefs = (p) => { try { localStorage.setItem(NOTIF_KEY, JSON.stringify(p)); } catch {} };
@@ -12,6 +14,23 @@ export async function requestPermission() {
   if (Notification.permission === 'granted') return 'granted';
   const result = await Notification.requestPermission();
   savePrefs({ ...loadPrefs(), permissionAsked: true, permission: result });
+  
+  if (result === 'granted') {
+    try {
+      const reg = await navigator.serviceWorker?.ready;
+      if (reg) {
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          // Generic VAPID key placeholder for now
+          applicationServerKey: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'
+        });
+        await savePushToken(JSON.stringify(sub));
+      }
+    } catch (err) {
+      console.warn('Push subscription failed:', err);
+    }
+  }
+
   return result;
 }
 

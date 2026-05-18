@@ -7,7 +7,7 @@
  * Detects: food, supplements, medicine, plants, animals, products, documents, anything.
  */
 export function buildAnalysisPrompt(options = {}) {
-  const { gymMode = false, userGoal = '', personality = 'coach' } = options;
+  const { gymMode = false, userGoal = '', personality = 'coach', context = 'eating' } = options;
 
   const voiceStyle = {
     savage_roast: 'Be brutally honest and darkly funny. Expose the truth. Roast it if it deserves it. Still give real actionable advice.',
@@ -30,6 +30,14 @@ export function buildAnalysisPrompt(options = {}) {
   const goalContext = userGoal
     ? `\nUser goal: "${userGoal}". Frame ALL consequences and recommendations specifically for this goal.`
     : '';
+
+  const buyingContext = context === 'buying'
+    ? `\nCURRENT CONTEXT: The user is considering BUYING this item. Focus heavily on:
+1. Is it worth buying?
+2. Long-term consequences of bringing this home.
+3. Better alternatives they might find on the same store shelf.
+In 'improvements', explicitly suggest better items to buy instead.`
+    : `\nCURRENT CONTEXT: The user is about to EAT/CONSUME this item right now. Focus on immediate physiological consequences.`;
 
   return `You are an advanced AI analyst specializing in nutrition science, food safety, medicine, botany, zoology, and product identification.
 
@@ -84,7 +92,7 @@ Return ONLY valid JSON (no markdown):
   ],${gymSection}
   "voice_explanation": "string — 2-3 sentences. ${voiceStyle} CRITICAL: Frame around CONSEQUENCES and BODY EFFECTS, not just numbers. Instead of 'contains 14g sugar', say 'this will spike your blood sugar fast and you will likely feel a crash within an hour'. Be specific to THIS exact product."
 }
-${goalContext}
+${goalContext}${buyingContext}
 
 RULES:
 - body_consequences: minimum 2, maximum 4. Always consequence-framed, never just numbers.

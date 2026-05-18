@@ -19,6 +19,7 @@ export default function ScanPage() {
   const { recordScan } = useGamificationStore();
 
   const [mode,        setMode]        = useState('camera');
+  const [scanContext, setScanContext] = useState('eating'); // 'eating' | 'buying'
   const [file,        setFile]        = useState(null);
   const [preview,     setPreview]     = useState(null);
   const [error,       setError]       = useState('');
@@ -93,8 +94,8 @@ export default function ScanPage() {
     setError('');
     setIsAnalyzing(true);
     try {
-      const result = await analyzeScan(imageFile, gymMode, getGoal(), getPersona());
-      try { trackEvent('scan_complete', { health_score: result.health_score }); } catch {}
+      const result = await analyzeScan(imageFile, gymMode, getGoal(), getPersona(), scanContext);
+      try { trackEvent('scan_complete', { health_score: result.health_score, context: scanContext }); } catch {}
       try { resetBackoff(); } catch {}
       try { recordScan(); } catch {}
 
@@ -139,19 +140,35 @@ export default function ScanPage() {
           <ArrowLeft size={20} />
         </button>
 
-        <div style={{ display: 'flex', background: 'rgba(14,14,16,0.8)', borderRadius: 'var(--r-full)', padding: 3, gap: 2, border: '1px solid var(--glass-border)' }}>
-          {[{ id: 'camera', icon: Camera, label: 'Camera' }, { id: 'upload', icon: Upload, label: 'Upload' }].map(({ id, icon: Icon, label }) => (
-            <button key={id} onClick={() => setMode(id)} style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-              borderRadius: 'var(--r-full)',
-              background: mode === id ? 'var(--primary)' : 'transparent',
-              color: mode === id ? 'var(--on-primary)' : 'var(--on-surface-muted)',
-              border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)',
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', transition: 'all var(--t-base)',
-            }}>
-              <Icon size={13} />{label.toUpperCase()}
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', background: 'rgba(14,14,16,0.8)', borderRadius: 'var(--r-full)', padding: 3, gap: 2, border: '1px solid var(--glass-border)' }}>
+            {[{ id: 'camera', icon: Camera, label: 'Camera' }, { id: 'upload', icon: Upload, label: 'Upload' }].map(({ id, icon: Icon, label }) => (
+              <button key={id} onClick={() => setMode(id)} style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
+                borderRadius: 'var(--r-full)',
+                background: mode === id ? 'var(--primary)' : 'transparent',
+                color: mode === id ? 'var(--on-primary)' : 'var(--on-surface-muted)',
+                border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', transition: 'all var(--t-base)',
+              }}>
+                <Icon size={13} />{label.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', background: 'rgba(14,14,16,0.8)', borderRadius: 'var(--r-full)', padding: 3, gap: 2, border: '1px solid var(--glass-border)' }}>
+            {[{ id: 'eating', label: 'EATING' }, { id: 'buying', label: 'BUYING' }].map(({ id, label }) => (
+              <button key={id} onClick={() => setScanContext(id)} style={{
+                padding: '4px 10px', borderRadius: 'var(--r-full)',
+                background: scanContext === id ? (id === 'buying' ? 'var(--secondary)' : 'var(--primary)') : 'transparent',
+                color: scanContext === id ? '#fff' : 'var(--on-surface-muted)',
+                border: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)',
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', transition: 'all var(--t-base)',
+              }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

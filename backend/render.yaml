@@ -11,10 +11,30 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3001
+        value: 10000
       - key: FRONTEND_URL
         sync: false
       - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY_1
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GEMINI_API_KEY_3
+        sync: false
+      - key: GEMINI_API_KEY_4
+        sync: false
+      - key: GEMINI_API_KEY_5
+        sync: false
+      - key: GROQ_API_KEY_1
+        sync: false
+      - key: GROQ_API_KEY_2
+        sync: false
+      - key: GROQ_API_KEY_3
+        sync: false
+      - key: GROQ_API_KEY_4
+        sync: false
+      - key: GROQ_API_KEY_5
         sync: false
       - key: USDA_API_KEY
         sync: false
@@ -24,7 +44,13 @@ services:
         sync: false
       - key: FIREBASE_CLIENT_EMAIL
         sync: false
-      - key: FIREBASE_STORAGE_BUCKET
+      - key: MURF_API_KEY
         sync: false
-      - key: ELEVENLABS_API_KEY
+      - key: ADMIN_EMAILS
         sync: false
+      - key: FREE_SCAN_LIMIT
+        value: "5"
+      - key: PREMIUM_SCAN_LIMIT
+        value: "50"
+      - key: SHARP_IGNORE_GLOBAL_LIBVIPS
+        value: "1"

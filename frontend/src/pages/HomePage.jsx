@@ -10,12 +10,19 @@ import GlassCard from '../components/layout/GlassCard.jsx';
 import MacroCard from '../components/ui/MacroCard.jsx';
 import Chip from '../components/ui/Chip.jsx';
 import ProactiveInsights from '../components/ui/ProactiveInsights.jsx';
+import HabitPrompt from '../components/ui/HabitPrompt.jsx';
 import NotificationPrompt from '../components/ui/NotificationPrompt.jsx';
 import { getScanHistory, getDailyNutrition } from '../services/api.js';
 import useAppStore from '../store/useAppStore.js';
 import { scoreToColor } from '../utils/scoreColor.js';
 import { timeAgo } from '../utils/formatNutrition.js';
 import { shouldAskPermission } from '../services/notifications.js';
+
+function getReputationTitle(score) {
+  if (score >= 8) return { title: 'High-Performance Eater', color: 'var(--primary)' };
+  if (score >= 5) return { title: 'Balanced Eater', color: 'var(--warning)' };
+  return { title: 'Needs Optimization', color: 'var(--error)' };
+}
 
 function PulseScanButton({ onClick }) {
   return (
@@ -100,8 +107,33 @@ export default function HomePage() {
         {/* GAP 2: Proactive AI warnings — behavior change engine */}
         <ProactiveInsights />
 
+        {/* GAP 4: Habit Loop Notifications */}
+        <HabitPrompt />
+
         {/* GAP 1: Notification prompt after first scan */}
         {showNotifPrompt && <NotificationPrompt onDismiss={() => setShowNotifPrompt(false)} />}
+
+        {/* Tier 1: Body Score & Reputation */}
+        {dailyStats && (
+          <GlassCard className="anim-fade-up" style={{ padding: 'var(--sp-5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderColor: 'rgba(0, 230, 57, 0.2)' }}>
+            <div>
+              <p className="text-label-md" style={{ color: 'var(--on-surface-muted)', marginBottom: 2 }}>YOUR BODY SCORE TODAY</p>
+              <p className="text-body-sm" style={{ color: getReputationTitle(dailyStats.nutritionScore || 5).color, fontWeight: 600 }}>
+                {getReputationTitle(dailyStats.nutritionScore || 5).title}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 'var(--sp-2)' }}>
+                <Zap size={12} color="var(--primary)" fill="var(--primary)" />
+                <span className="text-label" style={{ color: 'var(--primary)', fontSize: 10 }}>12 HEALTHY DECISIONS IN A ROW</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 36, fontWeight: 700, color: scoreToColor(dailyStats.nutritionScore || 5).color, lineHeight: 1 }}>
+                {(dailyStats.nutritionScore || 5).toFixed(1)}
+              </span>
+              <span className="text-label" style={{ color: 'var(--on-surface-muted)', fontSize: 12, marginBottom: 6 }}>/10</span>
+            </div>
+          </GlassCard>
+        )}
 
         {/* Hero — GAP 3: "Scan Before You Eat" positioning */}
         <GlassCard className="anim-fade-up" style={{ textAlign: 'center', padding: 'var(--sp-10) var(--sp-6)' }}>

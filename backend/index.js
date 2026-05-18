@@ -30,6 +30,9 @@ import groceryRoutes    from './routes/grocery.routes.js';
 import communityRoutes  from './routes/community.routes.js';
 import classifyRoutes   from './routes/classify.routes.js';
 import adminRoutes      from './routes/admin.routes.js';
+import wearablesRoutes  from './routes/wearables.routes.js';
+import enterpriseRoutes from './routes/enterprise.routes.js';
+import marketplaceRoutes from './routes/marketplace.routes.js';
 
 // ── Validate required env vars ────────────────────────────────────────────────
 function validateEnv() {
@@ -135,6 +138,9 @@ app.use('/api/grocery',    groceryRoutes);
 app.use('/api/community',  communityRoutes);
 app.use('/api/classify',   classifyRoutes);
 app.use('/api/admin',      adminRoutes);
+app.use('/api/wearables',  wearablesRoutes);
+app.use('/api/enterprise', enterpriseRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 
 // ── Error handlers ────────────────────────────────────────────────────────────
 app.use(notFoundHandler);
